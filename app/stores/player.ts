@@ -34,7 +34,21 @@ export const usePlayerStore = defineStore('player', {
     currentTitle: state => state.current?.Name || '',
     canNext: state => state.index >= 0 && state.index < state.queue.length - 1,
     canPrev: state => state.index > 0,
-    progressPercent: state => state.duration ? (state.progress / state.duration) * 100 : 0,
+    // Derive an effective duration: prefer actual measured duration, else fallback from metadata RunTimeTicks
+    effectiveDuration: (state) => {
+      if (state.duration && Number.isFinite(state.duration))
+        return state.duration
+      const ticks = state.current?.RunTimeTicks
+      if (ticks && ticks > 0) {
+        // 10,000,000 ticks per second (.NET TimeSpan)
+        return Math.floor(ticks / 10_000_000)
+      }
+      return 0
+    },
+    progressPercent() {
+      const total = (this as any).effectiveDuration as number
+      return total ? ((this as any).progress / total) * 100 : 0
+    },
     audioSrc: state => state.current ? `/api/stream/${state.current.Id}` : '',
   },
   actions: {

@@ -2,8 +2,7 @@
 const appName = 'Jellybeats'
 const items = [
   { label: 'Home', to: '/' },
-  { label: 'Playlists', to: '/playlists' },
-  { label: 'About', to: '/about' },
+  { label: 'Minimal Wave', to: '/playlist/0e694419242d8e2c9263637e43179a00' },
 ]
 </script>
 

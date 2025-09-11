@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '#nuxt-api-party/jellyfin'
 import { usePlayerStore } from '../stores/player'
+import { formatFromTicks } from '../utils/time'
 
 type JellyfinTrack = components['schemas']['BaseItemDto']
 
@@ -9,52 +10,125 @@ const props = defineProps<{
   active?: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'play', track: JellyfinTrack): void }>()
+const emit = defineEmits<{ (e: 'play', track: JellyfinTrack): void, (e: 'pause', track: JellyfinTrack): void }>()
 const player = usePlayerStore()
 
-function onPlayClick() {
-  if (emit)
-    emit('play', props.track)
-  else player.playTrack(props.track)
+const artistPrimary = computed(() => props.track.AlbumArtist || props.track.Artists?.[0] || 'Unknown Artist')
+const allArtists = computed(() => props.track.Artists?.length ? props.track.Artists.join(', ') : artistPrimary.value)
+const album = computed(() => props.track.Album || 'Unknown Album')
+const duration = computed(() => formatFromTicks(props.track.RunTimeTicks))
+const year = computed(() => props.track.ProductionYear || props.track.PremiereDate?.slice(0, 4))
+const bitrate = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.BitRate)
+const codec = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.Codec)
+const channels = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.Channels)
+const genres = computed(() => props.track.Genres || [])
+const isActive = computed(() => props.active ?? (player.current?.Id === props.track.Id))
+
+function playTrack() {
+  emit('play', props.track)
 }
 
-const artist = computed(() => props.track.AlbumArtist || props.track.Artists?.[0] || 'Unknown Artist')
-const album = computed(() => props.track.Album || 'Unknown Album')
-function formatDuration(ticks?: components['schemas']['BaseItemDto']['RunTimeTicks']) {
-  if (!ticks) {
-    return '—'
-  }
-  // Jellyfin RunTimeTicks: 10,000 ticks per millisecond? Actually .NET: 10,000 ticks per millisecond, 10 million per second.
-  const totalSeconds = Math.floor(ticks / 10_000_000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+function pauseTrack() {
+  emit('pause', props.track)
 }
-const duration = computed(() => formatDuration(props.track.RunTimeTicks))
-const isActive = computed(() => props.active ?? (player.current?.Id === props.track.Id))
+
+const coverUrl = computed(() => {
+  const p = props.track
+  if (!p?.Id)
+    return '/pwa-192x192.png'
+  const primaryTag = p.ImageTags?.Primary
+  const base = `/api/image/${p.Id}`
+  const params = new URLSearchParams()
+  if (primaryTag)
+    params.set('tag', primaryTag)
+  params.set('fillHeight', '200')
+  params.set('fillWidth', '200')
+  params.set('quality', '80')
+  return `${base}?${params.toString()}`
+})
+
+const audioSummary = computed(() => {
+  const parts: string[] = []
+  if (bitrate.value)
+    parts.push(`${Math.round(bitrate.value / 1000)}kbps`)
+  if (codec.value)
+    parts.push(codec.value.toUpperCase())
+  if (channels.value)
+    parts.push(`${channels.value}ch`)
+  return parts.join(' · ')
+})
 </script>
 
 <template>
   <UCard
-    class="hover:border-primary cursor-pointer p-3 transition-colors" :class="[
-      isActive ? 'border-primary ring-primary/40 ring-1' : '',
-    ]"
-    @click="onPlayClick"
+    class="group hover:border-primary relative overflow-hidden p-3 transition-colors"
+    :class="[isActive ? 'border-primary ring-primary/40 ring-1' : '']"
   >
-    <div class="flex flex-col gap-1">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium">
-            {{ artist }} - {{ album }} - {{ track.Name }}
-          </p>
+    <div class="flex gap-4">
+      <!-- Cover -->
+      <div class="relative h-16 w-16 shrink-0">
+        <img
+          :src="coverUrl"
+          :alt="track.Name || 'Track cover'"
+          class="h-full w-full rounded object-cover ring-1 ring-black/5 dark:ring-white/10"
+          loading="lazy"
+          decoding="async"
+        >
+        <button
+          class="absolute inset-0 flex items-center justify-center rounded bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+          @click.stop="playTrack"
+        >
+          <UIcon
+            v-if="!isActive"
+            name="i-carbon-play"
+            class="h-6 w-6 text-white"
+          />
+          <UIcon
+            v-else
+            name="i-carbon-pause"
+            class="h-6 w-6 text-white"
+            @click.stop="pauseTrack"
+          />
+        </button>
+      </div>
+
+      <!-- Main metadata -->
+      <div class="min-w-0 flex-1">
+        <div class="flex items-start gap-2">
+          <h3 class="truncate text-sm font-medium" :title="track.Name || ''">
+            {{ track.Name }}
+          </h3>
+          <span v-if="year" class="bg-primary/10 text-primary shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+            {{ year }}
+          </span>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <span class="w-10 text-right text-xs tabular-nums opacity-70">{{ duration }}</span>
-          <UButton size="xs" variant="ghost" @click.stop="onPlayClick">
-            <span v-if="isActive">Playing</span>
-            <span v-else>Play</span>
-          </UButton>
+        <p class="text-muted truncate text-xs" :title="allArtists">
+          {{ allArtists }}
+        </p>
+        <p class="text-muted truncate text-xs" :title="album">
+          {{ album }}
+        </p>
+
+        <div class="mt-1 flex flex-wrap gap-1">
+          <span v-if="audioSummary" class="border-default/50 text-muted rounded border border-dashed px-1.5 py-0.5 text-[10px]">
+            {{ audioSummary }}
+          </span>
+          <span v-for="g in genres.slice(0, 3)" :key="g" class="bg-default-100/60 text-muted rounded px-1.5 py-0.5 text-[10px]">
+            {{ g }}
+          </span>
+          <span v-if="genres.length > 3" class="bg-default-100/60 text-muted rounded px-1.5 py-0.5 text-[10px]">+{{ genres.length - 3 }}</span>
         </div>
+      </div>
+
+      <!-- Right column: duration & state -->
+      <div class="flex w-28 shrink-0 flex-col items-end justify-between text-right">
+        <span class="text-muted text-xs tabular-nums">{{ duration }}</span>
+        <UButton
+          size="xs"
+          variant="ghost"
+          :icon="isActive ? 'i-carbon-pause' : 'i-carbon-play'"
+          @click.stop="isActive ? pauseTrack() : playTrack()"
+        />
       </div>
     </div>
   </UCard>

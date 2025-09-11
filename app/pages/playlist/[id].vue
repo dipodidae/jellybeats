@@ -11,6 +11,14 @@ const route = useRoute()
 const id = computed(() => (route.params as unknown as RouteParams).id)
 const player = usePlayerStore()
 
+// Fetch playlist details for title & image (use /Items/{id} for generic item lookup)
+// @ts-expect-error runtime composable; path not in typed keys
+const { data: playlistData, error: playlistError, status: playlistStatus } = await useJellyfinData<components['schemas']['BaseItemDto']>(
+  () => `Items/${id.value}`,
+  { query: { UserId: useRuntimeConfig().public.jellyfinUserId } },
+)
+
+// Fetch playlist tracks
 // Jellyfin playlist items endpoint: /Playlists/{id}/Items
 // @ts-expect-error runtime composable; path not in typed keys
 const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinTrack>>(
@@ -19,9 +27,34 @@ const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<Jell
 )
 
 // Cast to any to access Items because api-party generic ResT typing omits it
+const playlist = computed(() => playlistData.value)
 const items = computed(() => (data.value as any)?.Items as JellyfinTrack[] || [])
 
-const pending = computed(() => status.value === 'pending')
+const pending = computed(() => status.value === 'pending' || playlistStatus.value === 'pending')
+
+// Build cover image URL similar to PlaylistCard logic
+const coverUrl = computed(() => {
+  const p: any = playlist.value
+  if (!p?.Id)
+    return '/pwa-192x192.png'
+  const primaryTag = p.ImageTags?.Primary
+  const base = `/api/image/${p.Id}`
+  const params = new URLSearchParams()
+  if (primaryTag)
+    params.set('tag', primaryTag)
+  params.set('fillHeight', '300')
+  params.set('fillWidth', '300')
+  params.set('quality', '90')
+  return `${base}?${params.toString()}`
+})
+
+// SEO meta
+useSeoMeta({
+  title: () => playlist.value?.Name ? `${playlist.value.Name} • Playlist` : 'Playlist',
+  ogTitle: () => playlist.value?.Name || 'Playlist',
+  description: () => `Tracks in playlist ${playlist.value?.Name || ''}`.trim(),
+  ogDescription: () => `Tracks in playlist ${playlist.value?.Name || ''}`.trim(),
+})
 
 function play(track: JellyfinTrack) {
   player.playTrack(track, items.value)
@@ -39,27 +72,37 @@ function playShuffle() {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <NuxtLink to="/playlists" class="text-primary text-sm hover:underline">
-      ← All Playlists
-    </NuxtLink>
-    <h1 class="text-2xl font-bold">
-      Playlist
-    </h1>
-    <div v-if="!pending" class="flex gap-2">
-      <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!items.length" @click="playAll">
-        Play All
-      </UButton>
-      <UButton size="sm" variant="soft" icon="i-carbon-shuffle" :disabled="!items.length" @click="playShuffle">
-        Shuffle Play
-      </UButton>
-    </div>
-    <div v-if="pending">
-      Loading tracks…
-    </div>
-    <UAlert v-else-if="error" color="error" title="Failed to load playlist" :description="error?.data?.statusMessage || error.message" />
-    <div v-else class="grid gap-4 lg:grid-cols-3">
-      <div class="space-y-2 lg:col-span-2">
+  <UPage>
+    <UPageHero
+      orientation="horizontal"
+      :title="(playlist as any)?.Name || (playlist as any)?.OriginalTitle || 'Playlist'"
+      :description="items.length ? `${items.length} track${items.length === 1 ? '' : 's'}` : ''"
+      :ui="{ title: 'text-left', description: 'text-left', links: 'justify-start' }"
+    >
+      <img
+        :src="coverUrl"
+        :alt="(playlist as any)?.Name || 'Playlist cover'"
+        class="ring-default aspect-square w-full max-w-[240px] rounded-lg object-cover shadow-2xl ring"
+        loading="lazy"
+        decoding="async"
+      >
+      <template #links>
+        <div class="flex gap-2 pt-2">
+          <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!items.length || pending" @click="playAll">
+            Play All
+          </UButton>
+          <UButton size="sm" variant="soft" icon="i-carbon-shuffle" :disabled="!items.length || pending" @click="playShuffle">
+            Shuffle
+          </UButton>
+        </div>
+      </template>
+    </UPageHero>
+    <UPageSection :ui="{ container: '!pt-0' }">
+      <div v-if="pending" class="py-8 text-sm opacity-75">
+        Loading tracks…
+      </div>
+      <UAlert v-else-if="error || playlistError" color="error" title="Failed to load playlist" :description="(error || playlistError)?.data?.statusMessage || (error || playlistError)?.message" />
+      <div v-else class="grid gap-4">
         <TrackCard
           v-for="track in items"
           :key="track.Id"
@@ -71,6 +114,6 @@ function playShuffle() {
           No tracks.
         </div>
       </div>
-    </div>
-  </div>
+    </UPageSection>
+  </UPage>
 </template>

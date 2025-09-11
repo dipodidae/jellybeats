@@ -29,8 +29,9 @@ const album = computed(() => player.current?.Album || null)
 
 // Volume control (directly manipulate audio element via store private helper)
 watch(volume, (v) => {
-  // @ts-expect-error internal helper
-  const audio = player._ensureAudio?.()
+  // internal helper is intentionally accessed (audio element encapsulated in store)
+  const anyPlayer = player as any
+  const audio: HTMLAudioElement | undefined = anyPlayer._ensureAudio?.()
   if (audio)
     audio.volume = v
 })
@@ -142,19 +143,28 @@ function toggleExpanded() {
             </div>
           </div>
 
-          <!-- Progress bar -->
+          <!-- Progress visualization -->
           <div class="mt-2">
-            <USlider
-              v-model="sliderValue"
-              :min="0"
-              :max="totalDuration || 0"
-              :step="1"
-              size="sm"
-              color="primary"
-              :disabled="!totalDuration"
-              class="cursor-pointer"
-              aria-label="Seek"
-            />
+            <!-- Mini mode slider -->
+            <template v-if="!expanded">
+              <USlider
+                v-model="sliderValue"
+                :min="0"
+                :max="totalDuration || 0"
+                :step="1"
+                size="sm"
+                color="primary"
+                :disabled="!totalDuration"
+                class="cursor-pointer"
+                aria-label="Seek"
+              />
+            </template>
+            <!-- Expanded waveform -->
+            <Transition name="fade">
+              <div v-if="expanded" class="pt-1">
+                <Waveform />
+              </div>
+            </Transition>
             <div class="mt-1 flex justify-between text-[10px] text-neutral-500 tabular-nums dark:text-neutral-400">
               <span>{{ formattedTime(player.progress) }}</span>
               <span>{{ formattedTime(totalDuration) }}</span>

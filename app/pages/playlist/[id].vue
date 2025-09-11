@@ -36,10 +36,10 @@ const pending = computed(() => status.value === 'pending' || playlistStatus.valu
 
 // SEO meta
 useSeoMeta({
-  title: () => playlist.value?.Name ? `${playlist.value.Name} • Playlist` : 'Playlist',
-  ogTitle: () => playlist.value?.Name || 'Playlist',
-  description: () => `Tracks in playlist ${playlist.value?.Name || ''}`.trim(),
-  ogDescription: () => `Tracks in playlist ${playlist.value?.Name || ''}`.trim(),
+  title: () => (playlist.value as any)?.Name ? `${(playlist.value as any).Name} • Playlist` : 'Playlist',
+  ogTitle: () => (playlist.value as any)?.Name || 'Playlist',
+  description: () => `Tracks in playlist ${(playlist.value as any)?.Name || ''}`.trim(),
+  ogDescription: () => `Tracks in playlist ${(playlist.value as any)?.Name || ''}`.trim(),
 })
 
 function play(track: JellyfinTrack) {

@@ -18,7 +18,7 @@ const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<Jell
 
 const pending = computed(() => status.value === 'pending')
 const playlists = computed(() => (data.value as any)?.Items || [])
-const showError = computed(() => !pending.value && !!error.value)
+const showErrorFlag = computed(() => !pending.value && !!error.value)
 </script>
 
 <template>
@@ -47,7 +47,7 @@ const showError = computed(() => !pending.value && !!error.value)
         </div>
       </div>
       <UAlert
-        v-else-if="showError"
+        v-else-if="showErrorFlag"
         color="error"
         title="Failed to load playlists"
         :description="error?.data?.statusMessage || error?.message"

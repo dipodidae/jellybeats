@@ -17,6 +17,7 @@
   "dependencies": {
     "@nuxt/ui-pro": "catalog:frontend",
     "openapi-typescript": "catalog:nuxt-api-party",
+    "wavesurfer.js": "catalog:frontend",
     "zod": "catalog:frontend"
   },
   "devDependencies": {

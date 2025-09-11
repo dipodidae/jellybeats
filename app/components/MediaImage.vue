@@ -7,7 +7,7 @@
  * - Emits 'error' when the <img> element fails to load (still shows fallback).
  */
 
-interface BaseMediaLike { Id?: string, ImageTags?: Record<string, string>, Name?: string }
+interface BaseMediaLike { Id?: string, ImageTags?: Record<string, string> | null, Name?: string | null }
 
 const props = withDefaults(defineProps<{
   item?: BaseMediaLike | null

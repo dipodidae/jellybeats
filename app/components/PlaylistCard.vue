@@ -10,7 +10,7 @@ const emit = defineEmits<{ (e: 'open', id: string): void, (e: 'play', id: string
 
 // Basic metadata
 const title = computed(() => props.playlist.Name || 'Untitled Playlist')
-const trackCount = computed(() => props.playlist?.ChildCount)
+const trackCount = computed(() => (props.playlist as any)?.ChildCount as number | undefined)
 const durationTicks = computed(() => (props.playlist as any)?.RunTimeTicks as number | undefined)
 // Convert ticks (10M per sec) -> minutes
 const totalMinutes = computed(() => {
@@ -25,9 +25,9 @@ const totalMinutes = computed(() => {
   const m = minutes % 60
   return m ? `${h}h ${m}m` : `${h}h`
 })
-const year = computed(() => props.playlist.ProductionYear)
+const year = computed(() => (props.playlist as any)?.ProductionYear as number | undefined)
 const isFav = computed(() => (props.playlist as any)?.UserData?.IsFavorite)
-const genres = computed(() => props.playlist.Genres || [])
+const genres = computed(() => ((props.playlist as any)?.Genres as string[] | undefined) || [])
 
 function open() {
   if (props.playlist.Id)
@@ -63,8 +63,8 @@ function shuffle() {
             class="h-full w-full"
           />
           <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-            <UButton size="2xs" variant="solid" icon="i-carbon-play" @click.stop="play" />
-            <UButton size="2xs" variant="soft" icon="i-carbon-shuffle" @click.stop="shuffle" />
+            <UButton size="xs" variant="solid" icon="i-carbon-play" @click.stop="play" />
+            <UButton size="xs" variant="soft" icon="i-carbon-shuffle" @click.stop="shuffle" />
           </div>
         </div>
 

@@ -1,0 +1,36 @@
+packages: []
+catalogs:
+  build:
+    '@commitlint/cli': ^19.3.0
+    '@commitlint/config-conventional': ^19.3.0
+    '@nuxt/devtools': ^2.6.2
+    '@nuxt/eslint': ^1.5.2
+    '@nuxt/kit': ^4.0.0
+    '@pinia/nuxt': ^0.11.1
+    '@vite-pwa/nuxt': ^1.0.4
+    '@vueuse/nuxt': ^13.5.0
+    husky: ^9.0.11
+    nuxt: ^4.0.0
+    unplugin: ^2.3.5
+    vite: ^7.0.4
+  dev:
+    '@antfu/eslint-config': ^5.2.1
+    eslint: ^9.31.0
+    eslint-plugin-format: ^1.0.1
+    eslint-plugin-tailwindcss: ^4.0.0-beta.0
+    typescript: ^5.8.3
+    vue-tsc: ^3.0.1
+  frontend:
+    '@nuxt/ui-pro': ^3.3.2
+    '@vueuse/core': ^13.5.0
+    pinia: ^3.0.3
+    vue: ^3.5.17
+  icons:
+    '@iconify-json/carbon': ^1.2.10
+    '@iconify-json/twemoji': ^1.2.2
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - unrs-resolver
+  - vue-demi

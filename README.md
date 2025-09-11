@@ -106,19 +106,43 @@ This project has been extended into **Jellybeats** – a public music player pow
 Create a `.env` (and optionally `.dev.development`) file based on `.env.example` and fill:
 
 ```
-JELLYFIN_URL=http://localhost:8096
-JELLYFIN_API_KEY=YOUR_KEY
-JELLYFIN_USER_ID=USER_ID
+NUXT_JELLYFIN_URL=http://localhost:8096
+NUXT_JELLYFIN_API_KEY=YOUR_KEY
+NUXT_JELLYFIN_USER_ID=USER_ID
 NUXT_UI_PRO_LICENSE=YOUR_LICENSE_KEY
+NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL=http://localhost:8096
 ```
 
-Never expose the Jellyfin API key in client code. The Nitro server routes in `server/api/` proxy all Jellyfin requests.
+The Jellyfin API key is injected server-side via a Nitro plugin into `nuxt-api-party` requests so it never appears in client bundles.
 
-### Implemented API Routes
+### Data Fetching (nuxt-api-party)
 
-- `GET /api/playlists` – Lists Jellyfin playlists for configured user.
-- `GET /api/playlist/:id` – Items (tracks) of a playlist.
-- `GET /api/stream/:id` – Proxied MP3 stream (no key leakage).
+We use [`nuxt-api-party`](https://github.com/johannschopplich/nuxt-api-party) to proxy Jellyfin. This generates two composables for the configured endpoint ID (`jellyfin`):
+
+- `$jellyfin(path, options)` – raw response (actions, mutations)
+- `useJellyfinData(path, options)` – reactive data with status/error/refresh
+
+Examples:
+
+```ts
+// Playlists listing
+const { data, error } = await useJellyfinData(
+  `Users/${useRuntimeConfig().jellyfinUserId}/Items`,
+  { query: { IncludeItemTypes: 'Playlist', Recursive: true, SortBy: 'SortName' } },
+)
+
+// Playlist tracks
+const { data: tracks } = await useJellyfinData(
+  () => `Playlists/${playlistId.value}/Items`,
+  { query: { SortBy: 'SortName' } },
+)
+```
+
+### Remaining Server Endpoint
+
+- `GET /api/stream/:id` – Proxied MP3 stream (protects API key & supports future range handling).
+
+The legacy playlist & playlist items server endpoints were removed after migration to `nuxt-api-party`.
 
 ### Frontend Pages / Components
 

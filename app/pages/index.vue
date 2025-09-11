@@ -1,111 +1,104 @@
+<script setup lang="ts">
+import type { JellyfinItemsResponse, JellyfinPlaylist } from '../types/jellyfin'
+
+// @ts-expect-error composable provided by nuxt-api-party at runtime
+const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinPlaylist>>(
+  () => `Users/${useRuntimeConfig().public.jellyfinUserId}/Items`,
+  { query: { IncludeItemTypes: 'Playlist', SortBy: 'SortName', Recursive: true } },
+)
+const pending = computed(() => status.value === 'pending')
+</script>
+
 <template>
-  <UContainer>
-    <UPage>
-      <UPageHeader title="Nuxt 4 Boilerplate" description="A modern starter template with Nuxt UI, Pinia, and server-side APIs" />
-
-      <UPageBody>
-        <div class="space-y-8">
-          <UCard>
-            <template #header>
-              <h2 class="text-xl font-semibold">
-                Welcome to your Nuxt 4 Boilerplate
-              </h2>
-            </template>
-
-            <p class="mb-6 text-gray-600 dark:text-gray-400">
-              This boilerplate includes everything you need to build modern web applications with Nuxt 4,
-              featuring beautiful UI components, state management, and server-side functionality.
-            </p>
-
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <UCard class="transition-shadow hover:shadow-lg">
-                <div class="flex items-start gap-4">
-                  <div class="bg-primary-100 dark:bg-primary-900 rounded-lg p-2">
-                    <UIcon name="i-lucide-bar-chart-3" class="text-primary h-6 w-6" />
-                  </div>
-                  <div class="flex-1">
-                    <h3 class="mb-2 font-semibold">
-                      Counter Store Demo
-                    </h3>
-                    <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                      Explore Pinia state management with a simple counter example.
-                      Demonstrates reactive state updates and component composition.
-                    </p>
-                    <UButton
-                      to="/counter"
-                      variant="outline"
-                      size="sm"
-                      trailing-icon="i-lucide-arrow-right"
-                    >
-                      View Counter
-                    </UButton>
-                  </div>
-                </div>
-              </UCard>
-
-              <UCard class="transition-shadow hover:shadow-lg">
-                <div class="flex items-start gap-4">
-                  <div class="bg-success-100 dark:bg-success-900 rounded-lg p-2">
-                    <UIcon name="i-lucide-activity" class="text-success h-6 w-6" />
-                  </div>
-                  <div class="flex-1">
-                    <h3 class="mb-2 font-semibold">
-                      Server API Integration
-                    </h3>
-                    <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                      See how server-side APIs work with real-time pageview tracking.
-                      Demonstrates Nitro server functions and data fetching.
-                    </p>
-                    <UButton
-                      to="/pageview"
-                      variant="outline"
-                      size="sm"
-                      trailing-icon="i-lucide-arrow-right"
-                    >
-                      View API Demo
-                    </UButton>
-                  </div>
-                </div>
-              </UCard>
-            </div>
-          </UCard>
-
-          <UCard>
-            <template #header>
-              <h2 class="text-xl font-semibold">
-                Features Included
-              </h2>
-            </template>
-
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-zap" class="h-5 w-5 text-yellow-500" />
-                <span class="text-sm">Nuxt 4 with Vite</span>
+  <div class="landing-page">
+    <header>
+      <img src="/nuxt.svg" alt="Jellybeats Logo" class="logo">
+      <h1>Jellybeats</h1>
+      <p class="subtitle">
+        A modern, open-source music streaming experience powered by Nuxt.
+      </p>
+    </header>
+    <main>
+      <section class="cta">
+        <h2 class="mb-4 text-xl font-semibold">
+          Featured Playlists
+        </h2>
+        <div v-if="pending">
+          Loading playlists…
+        </div>
+        <UAlert
+          v-else-if="error"
+          color="error"
+          title="Failed to load playlists"
+          :description="error?.data?.statusMessage || error.message"
+        />
+        <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <UCard v-for="pl in data?.Items" :key="pl.Id" class="hover:border-primary transition-colors">
+            <div class="flex items-center justify-between gap-3">
+              <div class="truncate font-medium">
+                {{ pl.Name }}
               </div>
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-palette" class="h-5 w-5 text-purple-500" />
-                <span class="text-sm">Nuxt UI Components</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-database" class="h-5 w-5 text-blue-500" />
-                <span class="text-sm">Pinia State Management</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-server" class="h-5 w-5 text-green-500" />
-                <span class="text-sm">Nitro Server Functions</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-shield-check" class="h-5 w-5 text-red-500" />
-                <span class="text-sm">TypeScript First</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <UIcon name="i-lucide-smartphone" class="h-5 w-5 text-indigo-500" />
-                <span class="text-sm">PWA Ready</span>
-              </div>
+              <NuxtLink :to="`/playlist/${pl.Id}`" class="shrink-0">
+                <UButton size="xs" variant="solid">
+                  Open
+                </UButton>
+              </NuxtLink>
             </div>
           </UCard>
         </div>
-      </UPageBody>
-    </UPage>
-  </UContainer>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; 2025 Jellybeats. All rights reserved.</p>
+    </footer>
+  </div>
 </template>
+
+<style scoped>
+.landing-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  color: #fff;
+}
+.logo {
+  width: 80px;
+  margin-bottom: 1rem;
+}
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.subtitle {
+  font-size: 1.2rem;
+  opacity: 0.85;
+}
+.cta {
+  margin: 2rem 0;
+}
+.get-started {
+  background: #06b6d4;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+.get-started:hover {
+  background: #4f46e5;
+}
+footer {
+  margin-top: auto;
+  padding: 1rem 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+</style>

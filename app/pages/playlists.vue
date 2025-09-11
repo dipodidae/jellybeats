@@ -1,23 +1,19 @@
 <script setup lang="ts">
 import type { JellyfinItemsResponse, JellyfinPlaylist } from '../types/jellyfin'
-import { $fetch } from 'ofetch'
-import { ref } from 'vue'
 
-const data = ref<JellyfinItemsResponse<JellyfinPlaylist> | null>(null)
-const error = ref<Error | null>(null)
-const pending = ref(true)
+// @ts-expect-error provided by nuxt-api-party runtime
+const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinPlaylist>>(
+  () => `Users/${useRuntimeConfig().public.jellyfinUserId}/Items`,
+  {
+    query: {
+      IncludeItemTypes: 'Playlist',
+      SortBy: 'SortName',
+      Recursive: true,
+    },
+  },
+)
 
-await (async () => {
-  try {
-    data.value = await $fetch<JellyfinItemsResponse<JellyfinPlaylist>>('/api/playlists')
-  }
-  catch (e: any) {
-    error.value = e
-  }
-  finally {
-    pending.value = false
-  }
-})()
+const pending = computed(() => status.value === 'pending')
 </script>
 
 <template>
@@ -28,7 +24,7 @@ await (async () => {
     <div v-if="pending">
       Loading playlists…
     </div>
-    <UAlert v-else-if="error" color="red" title="Failed to load playlists" :description="error.message" />
+    <UAlert v-else-if="error" color="error" title="Failed to load playlists" :description="error?.data?.statusMessage || error.message" />
     <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <UCard v-for="pl in data?.Items" :key="pl.Id" class="hover:border-primary transition-colors">
         <div class="flex items-center justify-between gap-3">

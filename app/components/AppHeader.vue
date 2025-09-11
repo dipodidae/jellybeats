@@ -1,46 +1,29 @@
 <script setup lang="ts">
-import { appName } from '~/constants'
-
-const items = computed(() => [
-  {
-    label: 'Home',
-    to: '/',
-  },
-  {
-    label: 'Counter Store',
-    to: '/counter',
-  },
-  {
-    label: 'Pageview API',
-    to: '/pageview',
-  },
-])
+const appName = 'Jellybeats'
+const items = [
+  { label: 'Home', to: '/' },
+  { label: 'Playlists', to: '/playlists' },
+  { label: 'About', to: '/about' },
+]
 </script>
 
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink to="/">
+      <NuxtLink to="/" class="text-primary flex items-center gap-2 text-xl font-bold">
+        <img src="/nuxt.svg" alt="Jellybeats Logo" class="h-8 w-8">
         {{ appName }}
       </NuxtLink>
-      <TemplateMenu />
     </template>
 
     <UNavigationMenu
       :items="items"
       variant="link"
+      class="ml-6"
     />
 
     <template #right>
       <UColorModeButton />
-    </template>
-
-    <template #body>
-      <UNavigationMenu
-        :items="items"
-        orientation="vertical"
-        class="-mx-2.5"
-      />
     </template>
   </UHeader>
 </template>

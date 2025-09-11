@@ -34,6 +34,7 @@
     "eslint-plugin-tailwindcss": "catalog:dev",
     "husky": "catalog:build",
     "nuxt": "catalog:build",
+    "nuxt-api-party": "catalog:nuxt-api-party",
     "pinia": "catalog:frontend",
     "typescript": "catalog:dev",
     "vue": "catalog:frontend",

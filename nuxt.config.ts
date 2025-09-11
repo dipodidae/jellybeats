@@ -1,3 +1,4 @@
+import { env } from 'node:process'
 import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
@@ -8,6 +9,7 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/ui-pro',
+    'nuxt-api-party',
   ],
 
   devtools: {
@@ -35,10 +37,19 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    jellyfinUrl: '',
-    jellyfinApiKey: '',
-    jellyfinUserId: '',
-    public: {},
+    jellyfinUrl: env.NUXT_JELLYFIN_URL,
+    jellyfinApiKey: env.NUXT_JELLYFIN_API_KEY,
+    jellyfinUserId: env.NUXT_JELLYFIN_USER_ID,
+    apiParty: {
+      endpoints: {
+        jellyfin: {
+          url: env.NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL || env.NUXT_JELLYFIN_URL,
+        },
+      },
+    },
+    public: {
+      jellyfinUserId: env.NUXT_PUBLIC_JELLYFIN_USER_ID || env.NUXT_JELLYFIN_USER_ID,
+    },
   },
 
   future: {

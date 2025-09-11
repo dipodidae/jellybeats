@@ -1,15 +1,61 @@
-import type { JellyfinItemsResponse, JellyfinPlaylist } from '../../types/jellyfin'
+import type { JellyfinBaseItem, JellyfinItemsResponse, JellyfinPlaylist } from '../../types/jellyfin'
+import { env } from 'node:process'
 
-export default defineEventHandler(async (): Promise<JellyfinItemsResponse<JellyfinPlaylist>> => {
+// Single in-memory cache for resolved playlists library id
+let cachedPlaylistsLibraryId: string | null = null
+
+export default defineEventHandler(async (event): Promise<JellyfinItemsResponse<JellyfinPlaylist>> => {
   const config = useRuntimeConfig()
-  if (!config.jellyfinUrl || !config.jellyfinApiKey || !config.jellyfinUserId) {
+  const userId = config.jellyfinUserId || (config.public as any)?.jellyfinUserId
+  if (!config.jellyfinUrl || !userId) {
     throw createError({ statusCode: 500, statusMessage: 'Jellyfin not configured' })
   }
 
-  const url = `${config.jellyfinUrl}/Users/${config.jellyfinUserId}/Items` as const
-  const query = new URLSearchParams({ IncludeItemTypes: 'Playlist' })
+  const q = getQuery(event)
+  const limit = Math.min(Number(q.limit ?? 100), 200)
+  const startIndex = Math.max(Number(q.startIndex ?? 0), 0)
 
-  return await $fetch<JellyfinItemsResponse<JellyfinPlaylist>>(`${url}?${query.toString()}`, {
-    headers: { 'X-Emby-Token': config.jellyfinApiKey as string },
-  })
+  // Optional override (deployment convenience)
+  const envLibraryId = (env.NUXT_PLAYLISTS_LIBRARY_ID || '').trim() || null
+  let libraryId = envLibraryId || cachedPlaylistsLibraryId
+
+  if (!libraryId) {
+  // Resolve collection folders and locate playlists folder
+    const libs = await $jellyfin<JellyfinItemsResponse<JellyfinBaseItem>>(
+      `Users/${userId}/Items`,
+      { query: { IncludeItemTypes: 'CollectionFolder' } },
+    )
+    const playlistsLib = libs.Items.find(
+      (item: JellyfinBaseItem) => item.Name?.toLowerCase() === 'playlists' || item.Id === '1071671e7bffa0532e930debee501d2e',
+    )
+    if (!playlistsLib) {
+      throw createError({ statusCode: 404, statusMessage: 'Playlists library not found' })
+    }
+    libraryId = playlistsLib.Id
+    cachedPlaylistsLibraryId = libraryId
+  }
+
+  const query = {
+    IncludeItemTypes: 'Playlist',
+    Recursive: true,
+    SortBy: 'SortName',
+    ParentId: libraryId,
+    StartIndex: startIndex,
+    Limit: limit,
+  }
+
+  try {
+    const data = await $jellyfin<JellyfinItemsResponse<JellyfinPlaylist>>(
+      `Users/${userId}/Items`,
+      { query },
+    )
+    setHeader(event, 'Cache-Control', 'public, max-age=60')
+    return data
+  }
+  catch (e: any) {
+    throw createError({
+      statusCode: e?.statusCode || 500,
+      statusMessage: e?.statusMessage || e?.message || 'Failed to load playlists',
+    })
+  }
 })

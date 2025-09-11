@@ -25,20 +25,7 @@ const playPauseIcon = computed(() => (player.isPlaying ? 'i-lucide-pause' : 'i-l
 const artists = computed(() => player.current?.Artists?.join(', ') || player.current?.AlbumArtist || 'Unknown Artist')
 const album = computed(() => player.current?.Album || null)
 
-// Artwork URL (with tag for cache busting if present)
-const artwork = computed(() => {
-  const cur = player.current
-  if (!cur?.Id)
-    return ''
-  const tag = cur.ImageTags?.Primary
-  const params = new URLSearchParams()
-  params.set('fillHeight', '128')
-  params.set('fillWidth', '128')
-  params.set('quality', '90')
-  if (tag)
-    params.set('tag', tag)
-  return `/api/image/${cur.Id}?${params.toString()}`
-})
+// Artwork handled by MediaImage component now
 
 // Volume control (directly manipulate audio element via store private helper)
 watch(volume, (v) => {
@@ -87,19 +74,15 @@ function toggleExpanded() {
           class="relative shrink-0"
           :class="expanded ? 'h-24 w-24 sm:h-28 sm:w-28' : 'h-14 w-14'"
         >
-          <img
-            v-if="artwork"
-            :src="artwork"
-            :alt="player.currentTitle"
-            class="h-full w-full rounded-md object-cover shadow"
-            loading="lazy"
-          >
-          <div
-            v-else
-            class="flex h-full w-full items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-          >
-            <UIcon name="i-lucide-music-2" class="h-6 w-6" />
-          </div>
+          <MediaImage
+            v-if="player.current"
+            :item="player.current"
+            :width="expanded ? 128 : 56"
+            :height="expanded ? 128 : 56"
+            :quality="90"
+            :alt="player.currentTitle || 'Artwork'"
+            class="h-full w-full rounded-md"
+          />
           <button
             class="focus:ring-primary absolute -top-2 -right-2 hidden rounded-full bg-neutral-900/80 p-1 text-neutral-100 shadow hover:bg-neutral-800 focus:ring-2 focus:outline-none sm:inline-flex dark:bg-neutral-100/20"
             :aria-label="expanded ? 'Collapse player' : 'Expand player'"

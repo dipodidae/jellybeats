@@ -32,21 +32,7 @@ const items = computed(() => (data.value as any)?.Items as JellyfinTrack[] || []
 
 const pending = computed(() => status.value === 'pending' || playlistStatus.value === 'pending')
 
-// Build cover image URL similar to PlaylistCard logic
-const coverUrl = computed(() => {
-  const p: any = playlist.value
-  if (!p?.Id)
-    return '/pwa-192x192.png'
-  const primaryTag = p.ImageTags?.Primary
-  const base = `/api/image/${p.Id}`
-  const params = new URLSearchParams()
-  if (primaryTag)
-    params.set('tag', primaryTag)
-  params.set('fillHeight', '300')
-  params.set('fillWidth', '300')
-  params.set('quality', '90')
-  return `${base}?${params.toString()}`
-})
+// Cover handled by MediaImage component now
 
 // SEO meta
 useSeoMeta({
@@ -79,13 +65,16 @@ function playShuffle() {
       :description="items.length ? `${items.length} track${items.length === 1 ? '' : 's'}` : ''"
       :ui="{ title: 'text-left', description: 'text-left', links: 'justify-start' }"
     >
-      <img
-        :src="coverUrl"
+      <MediaImage
+        v-if="playlist"
+        :item="playlist as any"
         :alt="(playlist as any)?.Name || 'Playlist cover'"
-        class="ring-default aspect-square w-full max-w-[240px] rounded-lg object-cover shadow-2xl ring"
-        loading="lazy"
-        decoding="async"
-      >
+        :width="300"
+        :height="300"
+        :quality="90"
+        rounded="rounded-lg"
+        class="ring-default aspect-square w-full max-w-[240px] shadow-2xl ring"
+      />
       <template #links>
         <div class="flex gap-2 pt-2">
           <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!items.length || pending" @click="playAll">

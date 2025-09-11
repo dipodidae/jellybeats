@@ -6,22 +6,7 @@ type PlaylistDto = components['schemas']['PlaylistDto'] & { Name?: string, Id?: 
 const props = defineProps<{ playlist: PlaylistDto }>()
 const emit = defineEmits<{ (e: 'open', id: string): void, (e: 'play', id: string): void, (e: 'shuffle', id: string): void }>()
 
-// Image
-const coverUrl = computed(() => {
-  const p = props.playlist
-  const primaryTag = p.ImageTags?.Primary
-  if (p.Id) {
-    const base = `/api/image/${p.Id}`
-    const params = new URLSearchParams()
-    if (primaryTag)
-      params.set('tag', primaryTag)
-    params.set('fillHeight', '300')
-    params.set('fillWidth', '300')
-    params.set('quality', '90')
-    return `${base}?${params.toString()}`
-  }
-  return '/pwa-192x192.png'
-})
+// Image handled by MediaImage component now
 
 // Basic metadata
 const title = computed(() => props.playlist.Name || 'Untitled Playlist')
@@ -68,13 +53,15 @@ function shuffle() {
       <div class="flex gap-4">
         <!-- Cover -->
         <div class="relative h-20 w-20 shrink-0">
-          <img
-            :src="coverUrl"
+          <MediaImage
+            :item="playlist"
             :alt="title"
-            class="h-full w-full rounded object-cover ring-1 ring-black/5 dark:ring-white/10"
-            loading="lazy"
-            decoding="async"
-          >
+            :width="300"
+            :height="300"
+            :quality="90"
+            rounded
+            class="h-full w-full"
+          />
           <div class="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
             <UButton size="2xs" variant="solid" icon="i-carbon-play" @click.stop="play" />
             <UButton size="2xs" variant="soft" icon="i-carbon-shuffle" @click.stop="shuffle" />

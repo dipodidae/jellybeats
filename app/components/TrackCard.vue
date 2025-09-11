@@ -32,20 +32,7 @@ function pauseTrack() {
   emit('pause', props.track)
 }
 
-const coverUrl = computed(() => {
-  const p = props.track
-  if (!p?.Id)
-    return '/pwa-192x192.png'
-  const primaryTag = p.ImageTags?.Primary
-  const base = `/api/image/${p.Id}`
-  const params = new URLSearchParams()
-  if (primaryTag)
-    params.set('tag', primaryTag)
-  params.set('fillHeight', '200')
-  params.set('fillWidth', '200')
-  params.set('quality', '80')
-  return `${base}?${params.toString()}`
-})
+// Image handled by MediaImage component now
 
 const audioSummary = computed(() => {
   const parts: string[] = []
@@ -67,13 +54,15 @@ const audioSummary = computed(() => {
     <div class="flex gap-4">
       <!-- Cover -->
       <div class="relative h-16 w-16 shrink-0">
-        <img
-          :src="coverUrl"
+        <MediaImage
+          :item="track"
           :alt="track.Name || 'Track cover'"
-          class="h-full w-full rounded object-cover ring-1 ring-black/5 dark:ring-white/10"
-          loading="lazy"
-          decoding="async"
-        >
+          :width="200"
+          :height="200"
+          :quality="80"
+          rounded
+          class="h-full w-full"
+        />
         <button
           class="absolute inset-0 flex items-center justify-center rounded bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
           @click.stop="playTrack"

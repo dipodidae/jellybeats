@@ -1,4 +1,7 @@
-import type { JellyfinItemsResponse, JellyfinTrack } from '../../../types/jellyfin'
+import type { components } from '#nuxt-api-party/jellyfin'
+
+type JellyfinTrack = components['schemas']['BaseItemDto']
+type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
 
 // Fetch tracks for a playlist; relays minimal caching and validates essentials
 export default defineEventHandler(async (event): Promise<JellyfinItemsResponse<JellyfinTrack>> => {
@@ -19,6 +22,7 @@ export default defineEventHandler(async (event): Promise<JellyfinItemsResponse<J
     query.SortBy = sortBy // only send non-default to keep cache key tight
 
   try {
+  // @ts-expect-error runtime call with simplified generic arguments
     const data = await $jellyfin<JellyfinItemsResponse<JellyfinTrack>>(`Playlists/${id}/Items`, { query })
     setHeader(event, 'Cache-Control', 'public, max-age=30')
     return data

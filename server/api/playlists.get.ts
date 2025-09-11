@@ -1,5 +1,9 @@
-import type { JellyfinBaseItem, JellyfinItemsResponse, JellyfinPlaylist } from '../../types/jellyfin'
+import type { components } from '#nuxt-api-party/jellyfin'
 import { env } from 'node:process'
+
+type JellyfinBaseItem = components['schemas']['BaseItemDto']
+type JellyfinPlaylist = components['schemas']['PlaylistDto']
+type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
 
 // Single in-memory cache for resolved playlists library id
 let cachedPlaylistsLibraryId: string | null = null
@@ -21,11 +25,12 @@ export default defineEventHandler(async (event): Promise<JellyfinItemsResponse<J
 
   if (!libraryId) {
   // Resolve collection folders and locate playlists folder
+  // @ts-expect-error runtime call with simplified generic arguments
     const libs = await $jellyfin<JellyfinItemsResponse<JellyfinBaseItem>>(
       `Users/${userId}/Items`,
       { query: { IncludeItemTypes: 'CollectionFolder' } },
     )
-    const playlistsLib = libs.Items.find(
+    const playlistsLib = (libs.Items || []).find(
       (item: JellyfinBaseItem) => item.Name?.toLowerCase() === 'playlists' || item.Id === '1071671e7bffa0532e930debee501d2e',
     )
     if (!playlistsLib) {
@@ -45,6 +50,7 @@ export default defineEventHandler(async (event): Promise<JellyfinItemsResponse<J
   }
 
   try {
+  // @ts-expect-error runtime call with simplified generic arguments
     const data = await $jellyfin<JellyfinItemsResponse<JellyfinPlaylist>>(
       `Users/${userId}/Items`,
       { query },

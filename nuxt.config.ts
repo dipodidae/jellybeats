@@ -40,13 +40,6 @@ export default defineNuxtConfig({
     jellyfinUrl: env.NUXT_JELLYFIN_URL,
     jellyfinApiKey: env.NUXT_JELLYFIN_API_KEY,
     jellyfinUserId: env.NUXT_JELLYFIN_USER_ID,
-    apiParty: {
-      endpoints: {
-        jellyfin: {
-          url: env.NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL || env.NUXT_JELLYFIN_URL,
-        },
-      },
-    },
     public: {
       jellyfinUserId: env.NUXT_PUBLIC_JELLYFIN_USER_ID || env.NUXT_JELLYFIN_USER_ID,
     },
@@ -75,6 +68,17 @@ export default defineNuxtConfig({
     prerender: {
       crawlLinks: false,
       routes: ['/'],
+    },
+  },
+
+  // nuxt-api-party module configuration (static, not in runtimeConfig!)
+  apiParty: {
+    endpoints: {
+      jellyfin: {
+        // Provide a default empty string so type is always string; actual value should be set via env var
+        url: env.NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL || env.NUXT_JELLYFIN_URL || '',
+        schema: 'https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json',
+      },
     },
   },
 

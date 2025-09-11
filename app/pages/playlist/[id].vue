@@ -1,22 +1,40 @@
 <script setup lang="ts">
-import type { JellyfinItemsResponse, JellyfinTrack } from '../../types/jellyfin'
+import type { components } from '#nuxt-api-party/jellyfin'
 import { useRoute } from 'vue-router'
+import { usePlayerStore } from '../../stores/player'
+
+type JellyfinTrack = components['schemas']['BaseItemDto']
+type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
+interface RouteParams { id: string }
 
 const route = useRoute()
-const id = computed(() => route.params.id as string)
+const id = computed(() => (route.params as unknown as RouteParams).id)
+const player = usePlayerStore()
 
 // Jellyfin playlist items endpoint: /Playlists/{id}/Items
-// @ts-expect-error provided by nuxt-api-party runtime
+// @ts-expect-error runtime composable; path not in typed keys
 const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinTrack>>(
   () => `Playlists/${id.value}/Items`,
   { query: { UserId: useRuntimeConfig().public.jellyfinUserId } },
 )
 
+// Cast to any to access Items because api-party generic ResT typing omits it
+const items = computed(() => (data.value as any)?.Items as JellyfinTrack[] || [])
+
 const pending = computed(() => status.value === 'pending')
-const currentTrack = ref<JellyfinTrack | null>(null)
 
 function play(track: JellyfinTrack) {
-  currentTrack.value = track
+  player.playTrack(track, items.value)
+}
+
+function playAll() {
+  if (items.value.length)
+    player.playAll(items.value)
+}
+
+function playShuffle() {
+  if (items.value.length)
+    player.playAllShuffled(items.value)
 }
 </script>
 
@@ -28,28 +46,30 @@ function play(track: JellyfinTrack) {
     <h1 class="text-2xl font-bold">
       Playlist
     </h1>
+    <div v-if="!pending" class="flex gap-2">
+      <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!items.length" @click="playAll">
+        Play All
+      </UButton>
+      <UButton size="sm" variant="soft" icon="i-carbon-shuffle" :disabled="!items.length" @click="playShuffle">
+        Shuffle Play
+      </UButton>
+    </div>
     <div v-if="pending">
       Loading tracks…
     </div>
     <UAlert v-else-if="error" color="error" title="Failed to load playlist" :description="error?.data?.statusMessage || error.message" />
     <div v-else class="grid gap-4 lg:grid-cols-3">
       <div class="space-y-2 lg:col-span-2">
-        <UCard v-for="track in data?.Items" :key="track.Id" class="hover:border-primary cursor-pointer p-3" @click="play(track)">
-          <div class="flex items-center justify-between gap-3">
-            <div class="truncate text-sm">
-              {{ track.Name }}
-            </div>
-            <UButton size="2xs" variant="ghost" @click.stop="play(track)">
-              Play
-            </UButton>
-          </div>
-        </UCard>
-        <div v-if="!data?.Items?.length" class="text-sm opacity-60">
+        <TrackCard
+          v-for="track in items"
+          :key="track.Id"
+          :track="track"
+          :active="player.current?.Id === track.Id"
+          @play="play"
+        />
+        <div v-if="!items.length" class="text-sm opacity-60">
           No tracks.
         </div>
-      </div>
-      <div v-if="currentTrack" class="sticky top-4">
-        <Player :track-id="currentTrack.Id" :title="currentTrack.Name" />
       </div>
     </div>
   </div>

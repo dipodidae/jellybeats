@@ -5,5 +5,7 @@
     <UMain>
       <slot />
     </UMain>
+
+    <Player />
   </div>
 </template>

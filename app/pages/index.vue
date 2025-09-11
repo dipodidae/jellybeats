@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import type { JellyfinItemsResponse, JellyfinPlaylist } from '../types/jellyfin'
+import type { components } from '#nuxt-api-party/jellyfin'
 
-// @ts-expect-error composable provided by nuxt-api-party at runtime
+type JellyfinPlaylist = components['schemas']['PlaylistDto']
+type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
+
+// @ts-expect-error composable provided by nuxt-api-party at runtime (generic keys not enforced)
 const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinPlaylist>>(
   () => `Users/${useRuntimeConfig().public.jellyfinUserId}/Items`,
   { query: { IncludeItemTypes: 'Playlist', SortBy: 'SortName', Recursive: true } },
 )
 const pending = computed(() => status.value === 'pending')
+const playlists = computed(() => (data.value as any)?.Items || [])
 </script>
 
 <template>
@@ -33,7 +37,7 @@ const pending = computed(() => status.value === 'pending')
           :description="error?.data?.statusMessage || error.message"
         />
         <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <UCard v-for="pl in data?.Items" :key="pl.Id" class="hover:border-primary transition-colors">
+          <UCard v-for="pl in playlists" :key="pl.Id" class="hover:border-primary transition-colors">
             <div class="flex items-center justify-between gap-3">
               <div class="truncate font-medium">
                 {{ pl.Name }}

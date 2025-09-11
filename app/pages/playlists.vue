@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import type { JellyfinItemsResponse, JellyfinPlaylist } from '../types/jellyfin'
+import type { components } from '#nuxt-api-party/jellyfin'
 
-// @ts-expect-error provided by nuxt-api-party runtime
+type JellyfinPlaylist = components['schemas']['PlaylistDto']
+type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
+
+// @ts-expect-error runtime composable generics
 const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinPlaylist>>(
   () => `Users/${useRuntimeConfig().public.jellyfinUserId}/Items`,
   {
@@ -14,6 +17,7 @@ const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<Jell
 )
 
 const pending = computed(() => status.value === 'pending')
+const playlists = computed(() => (data.value as any)?.Items || [])
 </script>
 
 <template>
@@ -26,7 +30,7 @@ const pending = computed(() => status.value === 'pending')
     </div>
     <UAlert v-else-if="error" color="error" title="Failed to load playlists" :description="error?.data?.statusMessage || error.message" />
     <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <UCard v-for="pl in data?.Items" :key="pl.Id" class="hover:border-primary transition-colors">
+      <UCard v-for="pl in playlists" :key="pl.Id" class="hover:border-primary transition-colors">
         <div class="flex items-center justify-between gap-3">
           <div class="truncate font-medium">
             {{ pl.Name }}
@@ -38,7 +42,7 @@ const pending = computed(() => status.value === 'pending')
           </NuxtLink>
         </div>
       </UCard>
-      <div v-if="!data?.Items?.length" class="col-span-full text-sm opacity-60">
+      <div v-if="!playlists.length" class="col-span-full text-sm opacity-60">
         No playlists found.
       </div>
     </div>

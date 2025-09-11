@@ -15,7 +15,9 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@nuxt/ui-pro": "catalog:frontend"
+    "@nuxt/ui-pro": "catalog:frontend",
+    "openapi-typescript": "catalog:nuxt-api-party",
+    "zod": "catalog:frontend"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",

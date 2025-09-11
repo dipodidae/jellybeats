@@ -21,6 +21,8 @@ const props = withDefaults(defineProps<{
   cover?: boolean
   showIcon?: boolean
   icon?: string
+  /** When true, component root is explicitly sized via inline width/height. When false (default) it stretches to parent size while still requesting the desired pixel dimensions from server for sharpness. */
+  fixedSize?: boolean
 }>(), {
   quality: 85,
   width: 300,
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
   cover: true,
   showIcon: true,
   icon: 'i-lucide-music-2',
+  fixedSize: false,
 })
 
 const emit = defineEmits<{ (e: 'error'): void }>()
@@ -71,20 +74,23 @@ const radiusClass = computed(() => {
     return props.rounded
   return props.rounded ? 'rounded-md' : ''
 })
+
+// Only apply explicit inline size if fixedSize requested. This lets parent contexts (cards, hero, player) control layout while we still fetch appropriately sized pixels from the server for crispness.
+const rootStyle = computed(() => (props.fixedSize ? { width: `${props.width}px`, height: `${props.height}px` } : undefined))
 </script>
 
 <template>
   <div
     class="relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
     :class="[radiusClass]"
-    :style="{ width: `${width}px`, height: `${height}px` }"
+    :style="rootStyle"
   >
     <!-- Image when available -->
     <img
       v-if="mediaId"
       :src="src"
       :alt="altText"
-      class="h-full w-full"
+      class="h-full w-full select-none"
       :class="[cover ? 'object-cover' : 'object-contain', radiusClass]"
       loading="lazy"
       decoding="async"

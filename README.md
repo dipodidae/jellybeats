@@ -157,3 +157,15 @@ The legacy playlist & playlist items server endpoints were removed after migrati
 - Recently played + basic analytics.
 - Caching headers on playlist + items endpoints.
 - Range request support in stream proxy (partial content 206) for better scrubbing.
+
+### AI / Copilot Guidance
+
+For automated assistance (GitHub Copilot Chat or similar), see `./.github/copilot-instructions.md` which documents:
+
+- Architectural overview & folder purpose
+- API & server route patterns
+- Coding + typing conventions
+- Security expectations (no leaking env secrets)
+- Adding components or endpoints checklists
+
+When proposing changes, assistants should provide minimal patches (not full files) and never echo real secret values—use placeholders. Conventional commits are preferred (e.g., `feat: add playlist cache`).

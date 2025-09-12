@@ -18,9 +18,9 @@ function closeMobileNav() {
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink to="/" class="text-primary flex items-center gap-2 text-xl font-bold">
+      <ULink to="/" class="flex items-center gap-2 text-xl font-bold" active-class="text-primary" inactive-class="text-muted">
         {{ appName }}
-      </NuxtLink>
+      </ULink>
     </template>
 
     <UNavigationMenu
@@ -59,15 +59,17 @@ function closeMobileNav() {
         </UButton>
       </div>
       <nav class="flex flex-col gap-2">
-        <NuxtLink
+        <ULink
           v-for="item in items"
           :key="item.to"
           :to="item.to"
           class="rounded px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+          active-class="font-semibold text-primary"
+          inactive-class="text-muted"
           @click="closeMobileNav"
         >
           {{ item.label }}
-        </NuxtLink>
+        </ULink>
       </nav>
       <div class="mt-auto pt-6 text-xs text-gray-500 dark:text-gray-400">
         <span>&copy; {{ new Date().getFullYear() }} {{ appName }}</span>

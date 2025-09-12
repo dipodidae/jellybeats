@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import type { components } from '#nuxt-api-party/jellyfin'
 import { usePlayerStore } from '../stores/player'
 import { formatFromTicks } from '../utils/time'
 
-type JellyfinTrack = components['schemas']['BaseItemDto']
-
+// Using any for now to stay lean; upstream OpenAPI types were removed in refactor
 const props = defineProps<{
-  track: JellyfinTrack
-  active?: boolean
+  track: any
 }>()
 
-const emit = defineEmits<{ (e: 'play', track: JellyfinTrack): void, (e: 'pause', track: JellyfinTrack): void }>()
+const emit = defineEmits<{ (e: 'play', track: any): void, (e: 'pause', track: any): void }>()
 const player = usePlayerStore()
 
 const artistPrimary = computed(() => props.track.AlbumArtist || props.track.Artists?.[0] || 'Unknown Artist')
@@ -18,11 +15,11 @@ const allArtists = computed(() => props.track.Artists?.length ? props.track.Arti
 const album = computed(() => props.track.Album || 'Unknown Album')
 const duration = computed(() => formatFromTicks(props.track.RunTimeTicks))
 const year = computed(() => props.track.ProductionYear || props.track.PremiereDate?.slice(0, 4))
-const bitrate = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.BitRate)
-const codec = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.Codec)
-const channels = computed(() => props.track?.MediaStreams?.find(s => s.Type === 'Audio')?.Channels)
+const bitrate = computed(() => props.track?.MediaStreams?.find((s: any) => s.Type === 'Audio')?.BitRate)
+const codec = computed(() => props.track?.MediaStreams?.find((s: any) => s.Type === 'Audio')?.Codec)
+const channels = computed(() => props.track?.MediaStreams?.find((s: any) => s.Type === 'Audio')?.Channels)
 const genres = computed(() => props.track.Genres || [])
-const isActive = computed(() => props.active ?? (player.current?.Id === props.track.Id))
+const isActive = computed(() => player.current?.Id === props.track.Id)
 
 function playTrack() {
   emit('play', props.track)

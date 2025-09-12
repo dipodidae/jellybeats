@@ -61,110 +61,147 @@ This project uses [Commitlint](https://commitlint.js.org/) with [Conventional Co
 
 Examples of valid commit messages:
 
-```bash
+````bash
 feat: add new counter store example
 fix: resolve pageview API response type
 docs: update README with commitlint info
 style: format code with prettier
 refactor: simplify component structure
-test: add unit tests for counter store
-chore: update dependencies
-```
+<div align="center">
 
-Git hooks are automatically installed via Husky to validate commit messages on `git commit`.
+## Jellyfin Music
 
-### Tailwind CSS Linting
+Lightweight, installable web player for your Jellyfin music library – fast playlist browsing, clean playback UI, and minimal abstraction.
 
-This project includes ESLint rules for Tailwind CSS to enforce best practices:
-
-- **Class ordering**: Ensures consistent ordering of Tailwind CSS classes
-- **Shorthand enforcement**: Suggests using shorthand classes (e.g., `m-4` instead of `mx-4 my-4`)
-- **Negative arbitrary values**: Enforces proper negative value syntax
-- **Unnecessary arbitrary values**: Warns about arbitrary values that could use standard classes
-
-The configuration is optimized for Tailwind CSS v4 and Nuxt UI compatibility. Custom classes from Nuxt UI are allowed and won't trigger warnings.
-
-Run `pnpm run lint --fix` to automatically fix class ordering and other auto-fixable issues.
-
-## Inspiration
-
-- [vitesse-nuxt](https://github.com/antfu/vitesse-nuxt) — The original inspiration
-- [nuxt/ui](https://ui.nuxt.com/) — Nuxt UI documentation
-
-## License
-
-MIT
+</div>
 
 ---
 
-## Jellyfin Music Additions
+### Why?
+The full Jellyfin UI is powerful but heavy for quick music listening. Jellyfin Music focuses purely on audio:
 
-This project has been extended into **Jellyfin Music** – a public music player powered by Jellyfin.
+* Instant playlists grid
+* Fast track listing & playback
+* PWA install (mobile / desktop)
+* Zero exposed API key in the client
+
+### Core Idea
+Keep a thin, typed bridge to the Jellyfin API and let the browser do the work. No re-wrapping of types, no custom fetch layers, no over-engineered state. One small player store + direct OpenAPI-driven calls.
+
+### Tech Stack
+* Nuxt 4 (SSR / Islands)
+* TypeScript
+* Pinia (player + minimal global state)
+* Nuxt UI (layout + components)
+* `nuxt-api-party` (typed Jellyfin API proxy)
+* VitePWA (installable shell)
+
+### Data Fetching Pattern (Required)
+Use `useJellyfinData` exactly like `useFetch`. No wrappers, no derived `pending` refs, no custom type aliases.
+
+```vue
+<script setup lang="ts">
+const userId = useRuntimeConfig().public.jellyfinUserId
+// List playlists
+const { data, status, error } = await useJellyfinData('/Items', {
+  query: { userId, includeItemTypes: ['Playlist'], sortBy: ['SortName'], recursive: true },
+})
+// Single playlist
+const { data: playlist } = await useJellyfinData('/Items/{itemId}', {
+  path: { itemId: 'PLAYLIST_ID' },
+  query: { userId },
+})
+// Tracks in playlist
+const { data: tracks } = await useJellyfinData('/Playlists/{playlistId}/Items', {
+  path: { playlistId: 'PLAYLIST_ID' },
+  query: { userId },
+})
+</script>
+````
+
+### Key Endpoints Used
+
+| Purpose           | Jellyfin Endpoint                                   |
+| ----------------- | --------------------------------------------------- |
+| List playlists    | `GET /Items` (filters: `includeItemTypes=Playlist`) |
+| Playlist metadata | `GET /Items/{itemId}`                               |
+| Playlist tracks   | `GET /Playlists/{playlistId}/Items`                 |
+| Stream audio      | `GET /api/stream/:id` (proxy in this app)           |
+| Images            | Proxied through `/api/image/:id` (server route)     |
+
+### Player Model
+
+Single Pinia store (`player`) manages:
+
+- Current track
+- Queue (sequential or shuffled)
+- Playback state & progress (HTMLAudioElement internally)
+- Derived duration (fallback to `RunTimeTicks` when needed)
 
 ### Environment Variables
 
-Create a `.env` (and optionally `.dev.development`) file based on `.env.example` and fill:
+Create `.env`:
 
 ```
-NUXT_JELLYFIN_URL=http://localhost:8096
-NUXT_JELLYFIN_API_KEY=YOUR_KEY
-NUXT_JELLYFIN_USER_ID=USER_ID
-NUXT_UI_PRO_LICENSE=YOUR_LICENSE_KEY
-NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL=http://localhost:8096
+NUXT_JELLYFIN_URL=https://your-jellyfin.example
+NUXT_JELLYFIN_API_KEY=changeme-api-key
+NUXT_JELLYFIN_USER_ID=changeme-user-id
+NUXT_API_PARTY_ENDPOINTS_JELLYFIN_URL=https://your-jellyfin.example
 ```
 
-The Jellyfin API key is injected server-side via a Nitro plugin into `nuxt-api-party` requests so it never appears in client bundles.
+The API key is injected server-side only (never shipped to client bundles).
 
-### Data Fetching (nuxt-api-party)
+### Development
 
-We use [`nuxt-api-party`](https://github.com/johannschopplich/nuxt-api-party) to proxy Jellyfin. This generates two composables for the configured endpoint ID (`jellyfin`):
-
-- `$jellyfin(path, options)` – raw response (actions, mutations)
-- `useJellyfinData(path, options)` – reactive data with status/error/refresh
-
-Examples:
-
-```ts
-// Playlists listing
-const { data, error } = await useJellyfinData(
-  `Users/${useRuntimeConfig().jellyfinUserId}/Items`,
-  { query: { IncludeItemTypes: 'Playlist', Recursive: true, SortBy: 'SortName' } },
-)
-
-// Playlist tracks
-const { data: tracks } = await useJellyfinData(
-  () => `Playlists/${playlistId.value}/Items`,
-  { query: { SortBy: 'SortName' } },
-)
+```bash
+pnpm install
+pnpm dev
 ```
 
-### Remaining Server Endpoint
+Visit `http://localhost:3000`.
 
-- `GET /api/stream/:id` – Proxied MP3 stream (protects API key & supports future range handling).
+### Architectural Principles
 
-The legacy playlist & playlist items server endpoints were removed after migration to `nuxt-api-party`.
+1. Direct OpenAPI paths – use placeholders (`/Items/{itemId}`) + `path: {}`.
+2. No re-defined Jellyfin types – rely on generated `components['schemas'][...]` when necessary (or `any` sparingly at view layer boundaries).
+3. Stateless UI components; shared logic in Pinia or small `utils/` helpers.
+4. Avoid premature abstraction; extract only after a second usage pattern appears.
+5. Small network footprint: only fetch what the page shows.
 
-### Frontend Pages / Components
+### Contributing
 
-- `pages/playlists` – Grid of playlists.
-- `pages/playlist/[id]` – Track list + inline player.
-- `app/components/Player.vue` – Re-usable audio player that streams via the proxy endpoint.
+- Follow the lean fetch pattern above.
+- Conventional commits: `feat:`, `fix:`, `refactor:`, etc.
+- Don’t add caching layers or wrappers unless there’s a demonstrated need.
+- Don’t leak or log real env values.
 
-### Next Ideas
+### Roadmap (Aspirational)
 
-- Artwork thumbnails via `/Items/{id}/Images/Primary`.
-- Recently played + basic analytics.
-- Caching headers on playlist + items endpoints.
-- Range request support in stream proxy (partial content 206) for better scrubbing.
+- Search (playlists + tracks)
+- Offline track caching (PWA partial sync)
+- Recently played & basic listening stats
+- Theming / dark mode refinements
+- Range / partial content streaming improvements
 
-### AI / Copilot Guidance
+### Troubleshooting
 
-For automated assistance (GitHub Copilot Chat or similar), see `./.github/copilot-instructions.md` which documents:
+| Issue             | Check                                                        |
+| ----------------- | ------------------------------------------------------------ |
+| Empty playlists   | Ensure `NUXT_JELLYFIN_USER_ID` matches a valid Jellyfin user |
+| 401 / 403 errors  | API key validity & server CORS / reverse proxy headers       |
+| Images missing    | Confirm `/api/image/:id` route & Jellyfin image availability |
+| Audio not playing | Browser autoplay policy (first interaction required)         |
 
-- Architectural overview & folder purpose
-- API & server route patterns
-- Coding + typing conventions
-- Security expectations (no leaking env secrets)
-- Adding components or endpoints checklists
+### Security Notes
 
-When proposing changes, assistants should provide minimal patches (not full files) and never echo real secret values—use placeholders. Conventional commits are preferred (e.g., `feat: add playlist cache`).
+- API key never exposed client-side.
+- Only read operations (except streaming) – no library mutation endpoints included.
+- Sanitize any future user-input before injecting into queries.
+
+### License
+
+MIT – see `LICENSE`.
+
+---
+
+Built to make Jellyfin music playback feel instant and focused. Enjoy. 🎧

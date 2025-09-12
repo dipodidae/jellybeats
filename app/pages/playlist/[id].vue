@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { useProvidePlaylistContext } from '../../composables/usePlaylistContext'
 import { usePlayerStore } from '../../stores/player'
 
 const route = useRoute('playlist-id')
 const itemId = computed(() => String(route.params.id))
 const userId = useRuntimeConfig().public.jellyfinUserId
-const player = usePlayerStore()
 
-const { data: playlist, error: playlistError, status: playlistStatus } = await useJellyfinData(
+const { data: playlist, error: playlistError } = await useJellyfinData(
   '/Items/{itemId}',
   {
     path: { itemId: itemId.value },
@@ -15,40 +15,39 @@ const { data: playlist, error: playlistError, status: playlistStatus } = await u
   },
 )
 
-// Tracks for playlist (BaseItemDtoQueryResult) using typed path
-const { data: tracksData, error, status } = await useJellyfinData(
-  '/Playlists/{playlistId}/Items',
-  {
-    path: { playlistId: itemId.value },
-    query: { userId },
-  },
-)
-
-const tracks = computed<any[]>(() => (tracksData.value as any)?.Items || [])
+// Provide playlist context (scoped to this page subtree)
+const { trackCount, tracksStatus, tracks } = useProvidePlaylistContext()
+const player = usePlayerStore()
 
 useSeoMeta({
   title: () => (playlist.value as any)?.Name ? `${(playlist.value as any).Name} • Playlist` : 'Playlist',
 })
 
-function play(track: any) {
-  player.playTrack(track, tracks.value)
-}
 function playAll() {
-  if ((tracks.value as any[]).length)
+  if (tracks.value.length)
     player.playAll(tracks.value)
 }
+
 function playShuffle() {
-  if ((tracks.value as any[]).length)
+  if (tracks.value.length)
     player.playAllShuffled(tracks.value)
 }
 </script>
 
 <template>
   <UPage>
+    <UAlert
+      v-if="playlistError"
+      color="error"
+      title="Failed to load playlist"
+      :description="(playlistError as any)?.data?.statusMessage || playlistError?.message"
+      class="mb-6"
+    />
     <UPageHero
+      v-else
       orientation="horizontal"
       :title="(playlist as any)?.Name || (playlist as any)?.OriginalTitle || 'Playlist'"
-      :description="tracks.length ? `${tracks.length} track${tracks.length === 1 ? '' : 's'}` : ''"
+      :description="trackCount ? `${trackCount} track${trackCount === 1 ? '' : 's'}` : ''"
       :ui="{ title: 'text-left', description: 'text-left', links: 'justify-start' }"
     >
       <MediaImage
@@ -63,37 +62,18 @@ function playShuffle() {
       />
       <template #links>
         <div class="flex gap-2 pt-2">
-          <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!tracks.length || status === 'pending'" @click="playAll">
+          <UButton size="sm" variant="solid" icon="i-carbon-play" :disabled="!trackCount || tracksStatus === 'pending'" @click="playAll">
             Play All
           </UButton>
-          <UButton size="sm" variant="soft" icon="i-carbon-shuffle" :disabled="!tracks.length || status === 'pending'" @click="playShuffle">
+          <UButton size="sm" variant="soft" icon="i-carbon-shuffle" :disabled="!trackCount || tracksStatus === 'pending'" @click="playShuffle">
             Shuffle
           </UButton>
         </div>
       </template>
     </UPageHero>
+
     <UPageSection :ui="{ container: '!pt-0' }">
-      <div v-if="status === 'pending' || playlistStatus === 'pending'" class="py-8 text-sm opacity-75">
-        Loading tracks…
-      </div>
-      <UAlert
-        v-else-if="error || playlistError"
-        color="error"
-        title="Failed to load playlist"
-        :description="((error || playlistError) as any)?.data?.statusMessage || (error || playlistError)?.message"
-      />
-      <div v-else-if="tracksData" class="grid gap-4">
-        <TrackCard
-          v-for="track in tracks"
-          :key="track.Id"
-          :track="track"
-          :active="player.current?.Id === track.Id"
-          @play="play"
-        />
-        <div v-if="!tracks.length" class="text-sm opacity-60">
-          No tracks.
-        </div>
-      </div>
+      <PlaylistTracks v-if="itemId" :id="itemId" />
     </UPageSection>
   </UPage>
 </template>

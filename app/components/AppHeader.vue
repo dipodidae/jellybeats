@@ -46,9 +46,9 @@ function closeMobileNav() {
 
   <!-- Mobile navigation slide-over -->
   <USlideover v-model="mobileNavOpen" side="left" class="md:hidden">
-    <div class="p-4 flex flex-col h-full">
-      <div class="flex items-center justify-between mb-4">
-        <span class="font-bold text-lg">{{ appName }}</span>
+    <div class="flex h-full flex-col p-4">
+      <div class="mb-4 flex items-center justify-between">
+        <span class="text-lg font-bold">{{ appName }}</span>
         <UButton
           color="neutral"
           variant="ghost"
@@ -63,7 +63,7 @@ function closeMobileNav() {
           v-for="item in items"
           :key="item.to"
           :to="item.to"
-          class="rounded px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          class="rounded px-3 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
           @click="closeMobileNav"
         >
           {{ item.label }}

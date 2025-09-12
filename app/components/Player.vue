@@ -7,6 +7,7 @@ const player = usePlayerStore()
 // Local UI state
 const expanded = ref(false)
 const volume = ref(1) // 0..1
+const rootEl = ref<HTMLElement | null>(null)
 
 // Keep slider (seek) binding in seconds
 const sliderValue = computed({
@@ -52,14 +53,39 @@ const progressPercent = computed(() => (totalDuration.value ? (player.progress /
 function toggleExpanded() {
   expanded.value = !expanded.value
 }
+
+// Observe size and update a CSS variable so layout can reserve space
+function updateReservedHeight() {
+  if (rootEl.value) {
+    const rect = rootEl.value.getBoundingClientRect()
+    // Add buffer so content never hides behind shadows or focus rings
+    document.documentElement.style.setProperty('--player-reserved', `${rect.height + 16}px`)
+  }
+}
+
+let resizeObs: ResizeObserver | null = null
+onMounted(() => {
+  if (rootEl.value && typeof ResizeObserver !== 'undefined') {
+    resizeObs = new ResizeObserver(() => updateReservedHeight())
+    resizeObs.observe(rootEl.value)
+    updateReservedHeight()
+  }
+  window.addEventListener('resize', updateReservedHeight)
+})
+onBeforeUnmount(() => {
+  resizeObs?.disconnect()
+  window.removeEventListener('resize', updateReservedHeight)
+})
+watch(expanded, () => nextTick(() => updateReservedHeight()))
 </script>
 
 <template>
   <div
     v-if="player.hasTrack"
-    class="global-player relative w-full overflow-hidden border-t bg-white/80 backdrop-blur dark:bg-black/60"
+    ref="rootEl"
+    class="global-player group relative w-full overflow-hidden border-t border-neutral-200/70 bg-white/80 backdrop-blur dark:border-neutral-800/70 dark:bg-neutral-950/70"
     :class="[
-      expanded ? 'h-[300px] sm:h-[260px]' : 'h-[86px]',
+      expanded ? 'h-[320px] sm:h-[270px]' : 'h-[96px] sm:h-[90px]',
     ]"
   >
     <!-- background glow / gradient -->
@@ -67,8 +93,8 @@ function toggleExpanded() {
     <div class="flex h-full flex-col">
       <!-- Top row (mini mode content) -->
       <div
-        class="flex flex-1 items-center gap-4 px-4 pt-3"
-        :class="expanded ? 'sm:pb-2 pb-2' : 'pb-3'"
+        class="flex flex-1 items-center gap-4 px-4"
+        :class="expanded ? 'pt-3 pb-2' : 'py-3'"
       >
         <!-- Artwork -->
         <div
@@ -110,14 +136,14 @@ function toggleExpanded() {
                 {{ album }}
               </p>
             </div>
-            <div class="flex shrink-0 items-center gap-1">
+            <div class="flex shrink-0 items-center gap-1 sm:gap-2">
               <UButton
                 icon="i-lucide-skip-back"
                 color="neutral"
-                variant="ghost"
+                variant="soft"
                 :disabled="!player.canPrev"
                 square
-                size="sm"
+                size="md"
                 aria-label="Previous track"
                 @click="player.prev"
               />
@@ -126,17 +152,17 @@ function toggleExpanded() {
                 color="primary"
                 variant="solid"
                 square
-                size="sm"
+                size="lg"
                 aria-label="Play / Pause"
                 @click="player.toggle"
               />
               <UButton
                 icon="i-lucide-skip-forward"
                 color="neutral"
-                variant="ghost"
+                variant="soft"
                 :disabled="!player.canNext"
                 square
-                size="sm"
+                size="md"
                 aria-label="Next track"
                 @click="player.next"
               />
@@ -152,7 +178,7 @@ function toggleExpanded() {
                 :min="0"
                 :max="totalDuration || 0"
                 :step="1"
-                size="sm"
+                size="md"
                 color="primary"
                 :disabled="!totalDuration"
                 class="cursor-pointer"
@@ -211,7 +237,7 @@ function toggleExpanded() {
                 :min="0"
                 :max="1"
                 :step="0.01"
-                size="xs"
+                size="sm"
                 color="neutral"
                 aria-label="Volume"
                 class="w-40"
@@ -233,7 +259,7 @@ function toggleExpanded() {
         </div>
       </Transition>
 
-      <div class="safe-area-spacer" />
+      <!-- integrated safe-area pad to keep vertical centering -->
     </div>
   </div>
 </template>
@@ -241,12 +267,10 @@ function toggleExpanded() {
 <style scoped>
 .global-player {
   position: fixed;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   bottom: 0;
-  z-index: 40;
-}
-.safe-area-spacer {
+  z-index: 50;
+  backdrop-filter: blur(14px);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .fade-enter-active,

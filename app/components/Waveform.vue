@@ -17,6 +17,7 @@ let ws: WaveSurfer | null = null
 let _hoverPlugin: any // kept for potential future customization
 let _minimapPlugin: any
 const ready = ref(false)
+const loading = ref(false)
 
 // Debounce resize (wavesurfer auto-resizes but we can force an update when expanded toggle happens)
 let resizeRaf: number | null = null
@@ -31,63 +32,75 @@ function queueResize() {
 }
 
 function destroyWs() {
-  if (ws) {
-    ws.destroy()
-    ws = null
-    _hoverPlugin = null
-    _minimapPlugin = null
-    ready.value = false
-  }
+  if (!ws)
+    return
+  ws.destroy()
+  ws = null
+  _hoverPlugin = null
+  _minimapPlugin = null
+  ready.value = false
+  loading.value = false
 }
 
 function initWs(url: string) {
   if (!containerRef.value)
     return
+  loading.value = true
   destroyWs()
+  // Derive theme colors
+  const css = getComputedStyle(document.documentElement)
+  const waveBase = css.getPropertyValue('--color-neutral-500').trim() || '#6b7280'
+  const primary = css.getPropertyValue('--ui-primary').trim() || '#8f8070'
+
+  // Try to reuse the app's single audio element to avoid double network fetch & analysis
+  const anyPlayer = player as any
+  const mediaEl: HTMLAudioElement | undefined = anyPlayer._ensureAudio?.()
+
   ws = WaveSurfer.create({
     container: containerRef.value,
-    waveColor: '#6366f1',
-    progressColor: '#4338ca',
-    cursorColor: '#0ea5e9',
-    barWidth: 2,
-    barGap: 1,
-    height: 72,
+    // Use continuous waveform (remove barWidth/barGap) to avoid blocky appearance
+    waveColor: waveBase,
+    progressColor: primary,
+    cursorColor: primary,
+    height: 68,
     normalize: true,
-    url,
-    autoplay: false, // we let the existing audio element handle sound
+    autoplay: false,
     interact: true,
-  })
+    // If we have media element, attach it; else fallback to fetching via url
+    media: mediaEl,
+    url: mediaEl ? undefined : url,
+    dragToSeek: true,
+  } as any)
+
   _hoverPlugin = ws.registerPlugin(Hover.create({
-    lineColor: '#fb923c',
+    lineColor: primary,
     lineWidth: 1,
-    labelBackground: 'rgba(0,0,0,0.65)',
+    labelBackground: 'rgba(0,0,0,0.55)',
     labelColor: '#fff',
   }))
   _minimapPlugin = ws.registerPlugin(Minimap.create({
-    height: 24,
-    waveColor: '#94a3b8',
-    progressColor: '#334155',
+    height: 22,
+    waveColor: `${waveBase}55`,
+    progressColor: primary,
   }))
 
   ws.on('ready', () => {
     ready.value = true
-    // Sync initial progress if player already progressed
-    if (player.progress && ws && ws.getDuration()) {
+    loading.value = false
+    if (player.progress && ws && ws.getDuration() > player.progress) {
       ws.setTime(player.progress)
     }
   })
-
-  // Mirror user interactions (seek via waveform) back to audio
+  ws.on('error', () => { loading.value = false })
   ws.on('interaction', () => {
     if (!ws)
       return
-    const t = ws.getCurrentTime()
-    player.seek(t)
+    player.seek(ws.getCurrentTime())
   })
 }
 
 // Watch current track changes
-watch(() => player.current?.Id, (id) => {
+watch(() => (player.current as any)?.Id, (id) => {
   if (!id) {
     destroyWs()
     return
@@ -96,18 +109,15 @@ watch(() => player.current?.Id, (id) => {
   initWs(url)
 })
 
-// Keep waveform position in sync with external audio progress (throttled via rAF)
+// Keep waveform cursor in sync ONLY when drifting noticeably; avoids constant setTime which can look blocky
 let syncRaf: number | null = null
 function syncLoop() {
-  if (ws && player.isPlaying) {
-    const dur = ws.getDuration()
+  if (ws && ready.value) {
+    const dur = ws.getDuration() || player.effectiveDuration || 0
     if (dur > 0) {
-      const wsTime = ws.getCurrentTime()
-      // only set if drift > 80ms to reduce churn
-      if (Math.abs(wsTime - player.progress) > 0.08) {
-        ws.setTime(Math.min(player.progress, dur - 0.01))
-      }
-      // If drift huge (maybe seek happened externally), just set
+      const drift = Math.abs(ws.getCurrentTime() - player.progress)
+      if (drift > 0.15)
+        ws.setTime(Math.min(player.progress, dur - 0.02))
     }
   }
   syncRaf = requestAnimationFrame(syncLoop)
@@ -135,20 +145,23 @@ watch(() => player.isPlaying, (p) => {
   }
 })
 
-// If progress leaps (external seek via slider maybe) update waveform
+// External seek (slider) while expanded
 watch(() => player.progress, (val, old) => {
   if (!ws || !ready.value)
     return
-  if (Math.abs(val - (old || 0)) > 0.25 && !player.isPlaying) {
+  if (Math.abs(val - (old || 0)) > 0.25 && !player.isPlaying)
     ws.setTime(val)
-  }
 })
 </script>
 
 <template>
   <div class="waveform-wrapper select-none">
-    <div ref="containerRef" class="waveform-container" />
-    <div v-if="!player.current" class="mt-2 text-center text-xs text-neutral-500">
+    <div ref="containerRef" class="waveform-container">
+      <div v-if="loading && !ready" class="flex h-full items-center justify-center text-xs text-neutral-500">
+        Loading waveform…
+      </div>
+    </div>
+    <div v-if="!player.current && !loading" class="mt-2 text-center text-xs text-neutral-500">
       No track selected
     </div>
   </div>
@@ -162,14 +175,26 @@ watch(() => player.progress, (val, old) => {
 .waveform-container {
   width: 100%;
   overflow: hidden;
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  background: rgba(245, 245, 245, 0.6);
+  border-radius: 0.625rem;
+  padding: 0.4rem 0.5rem 0.25rem;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.4));
+  position: relative;
+  min-height: 68px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 @media (prefers-color-scheme: dark) {
   .waveform-container {
-    background: rgba(38, 38, 38, 0.5);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
   }
+}
+.waveform-container ::part(cursor) {
+  width: 2px;
+  background: var(--ui-primary);
 }
 .waveform-container ::part(wave) {
   cursor: pointer;

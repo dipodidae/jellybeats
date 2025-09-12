@@ -1,16 +1,24 @@
 <script setup lang="ts">
-const appName = 'Jellybeats'
+import { ref } from 'vue'
+
+// Prefer a local constant to avoid import churn; if reused elsewhere, pull from ~/constants
+const appName = 'Jellyfin Music'
 const items = [
   { label: 'Home', to: '/' },
   { label: 'Minimal Wave', to: '/playlist/0e694419242d8e2c9263637e43179a00' },
 ]
+
+const mobileNavOpen = ref(false)
+
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
 </script>
 
 <template>
   <UHeader>
     <template #left>
       <NuxtLink to="/" class="text-primary flex items-center gap-2 text-xl font-bold">
-        <img src="/nuxt.svg" alt="Jellybeats Logo" class="h-8 w-8">
         {{ appName }}
       </NuxtLink>
     </template>
@@ -18,11 +26,52 @@ const items = [
     <UNavigationMenu
       :items="items"
       variant="link"
-      class="ml-6"
+      class="ml-6 hidden md:flex"
     />
 
     <template #right>
+      <!-- Hamburger button (mobile) -->
+      <UButton
+        color="neutral"
+        variant="ghost"
+        class="md:hidden"
+        aria-label="Open navigation menu"
+        @click="mobileNavOpen = true"
+      >
+        <UIcon name="i-heroicons-bars-3" class="size-6" />
+      </UButton>
       <UColorModeButton />
     </template>
   </UHeader>
+
+  <!-- Mobile navigation slide-over -->
+  <USlideover v-model="mobileNavOpen" side="left" class="md:hidden">
+    <div class="p-4 flex flex-col h-full">
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-bold text-lg">{{ appName }}</span>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          aria-label="Close navigation menu"
+          @click="closeMobileNav"
+        >
+          <UIcon name="i-heroicons-x-mark" class="size-6" />
+        </UButton>
+      </div>
+      <nav class="flex flex-col gap-2">
+        <NuxtLink
+          v-for="item in items"
+          :key="item.to"
+          :to="item.to"
+          class="rounded px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          @click="closeMobileNav"
+        >
+          {{ item.label }}
+        </NuxtLink>
+      </nav>
+      <div class="mt-auto pt-6 text-xs text-gray-500 dark:text-gray-400">
+        <span>&copy; {{ new Date().getFullYear() }} {{ appName }}</span>
+      </div>
+    </div>
+  </USlideover>
 </template>

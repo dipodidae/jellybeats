@@ -97,9 +97,9 @@ MIT
 
 ---
 
-## Jellybeats Additions
+## Jellyfin Music Additions
 
-This project has been extended into **Jellybeats** – a public music player powered by Jellyfin.
+This project has been extended into **Jellyfin Music** – a public music player powered by Jellyfin.
 
 ### Environment Variables
 

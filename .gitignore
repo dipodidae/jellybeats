@@ -6,6 +6,7 @@ dist
 .nuxt
 .env
 .env.*
+.dev*
 !.env.example
 .idea/
 public/assets/fonts

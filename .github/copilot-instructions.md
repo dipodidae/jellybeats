@@ -1,6 +1,6 @@
-# JellyBeats – GitHub Copilot Project Instructions
+# Jellyfin Music – GitHub Copilot Project Instructions
 
-These instructions guide AI assistants (and humans) contributing to JellyBeats. Keep responses concise, avoid exposing secrets, and conform to existing conventions.
+These instructions guide AI assistants (and humans) contributing to Jellyfin Music. Keep responses concise, avoid exposing secrets, and conform to existing conventions.
 
 ## 1. Project Purpose
 

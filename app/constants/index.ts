@@ -1,2 +1,2 @@
-export const appName = 'Boilerplate for Nuxt 4'
-export const appDescription = 'Boilerplate for Nuxt 4'
+export const appName = 'Jellyfin Music'
+export const appDescription = 'Lightweight Jellyfin music player'

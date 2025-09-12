@@ -171,26 +171,17 @@ watch(expanded, () => nextTick(() => updateReservedHeight()))
 
           <!-- Progress visualization -->
           <div class="mt-2">
-            <!-- Mini mode slider -->
-            <template v-if="!expanded">
-              <USlider
-                v-model="sliderValue"
-                :min="0"
-                :max="totalDuration || 0"
-                :step="1"
-                size="md"
-                color="primary"
-                :disabled="!totalDuration"
-                class="cursor-pointer"
-                aria-label="Seek"
-              />
-            </template>
-            <!-- Expanded waveform -->
-            <Transition name="fade">
-              <div v-if="expanded" class="pt-1">
-                <Waveform />
-              </div>
-            </Transition>
+            <USlider
+              v-model="sliderValue"
+              :min="0"
+              :max="totalDuration || 0"
+              :step="1"
+              :size="expanded ? 'lg' : 'md'"
+              color="primary"
+              :disabled="!totalDuration"
+              class="cursor-pointer"
+              aria-label="Seek"
+            />
             <div class="mt-1 flex justify-between text-[10px] text-neutral-500 tabular-nums dark:text-neutral-400">
               <span>{{ formattedTime(player.progress) }}</span>
               <span>{{ formattedTime(totalDuration) }}</span>
@@ -226,7 +217,7 @@ watch(expanded, () => nextTick(() => updateReservedHeight()))
         </div>
       </div>
 
-      <!-- Expanded extras -->
+  <!-- Expanded extras (additional controls) -->
       <Transition name="fade">
         <div v-if="expanded" class="px-4 pb-4">
           <div class="grid gap-4 sm:grid-cols-3">

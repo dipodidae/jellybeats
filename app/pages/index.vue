@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import type { components } from '#nuxt-api-party/jellyfin'
-
-type JellyfinPlaylist = components['schemas']['PlaylistDto']
-type JellyfinItemsResponse<T = any> = components['schemas']['BaseItemDtoQueryResult'] & { Items?: T[] }
-
-// @ts-expect-error runtime composable generics
-const { data, error, status } = await useJellyfinData<JellyfinItemsResponse<JellyfinPlaylist>>(
-  () => `Users/${useRuntimeConfig().public.jellyfinUserId}/Items`,
+// Lean Jellyfin fetch: list playlists via /Items
+const userId = useRuntimeConfig().public.jellyfinUserId
+const { data, error, status } = await useJellyfinData(
+  '/Items',
   {
     query: {
-      IncludeItemTypes: 'Playlist',
-      SortBy: 'SortName',
-      Recursive: true,
+      userId,
+      includeItemTypes: ['Playlist'],
+      sortBy: ['SortName'],
+      recursive: true,
     },
   },
 )
-
-const pending = computed(() => status.value === 'pending')
-const playlists = computed(() => (data.value as any)?.Items || [])
-const showErrorFlag = computed(() => !pending.value && !!error.value)
 </script>
 
 <template>
@@ -27,7 +20,7 @@ const showErrorFlag = computed(() => !pending.value && !!error.value)
       <h1 class="text-2xl font-bold">
         Playlists
       </h1>
-      <div v-if="pending" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div v-if="status === 'pending'" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="n in 6"
           :key="n"
@@ -47,18 +40,21 @@ const showErrorFlag = computed(() => !pending.value && !!error.value)
         </div>
       </div>
       <UAlert
-        v-else-if="showErrorFlag"
+        v-else-if="error"
         color="error"
         title="Failed to load playlists"
-        :description="error?.data?.statusMessage || error?.message"
+        :description="(error as any)?.data?.statusMessage || error?.message"
       />
-      <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div v-else-if="status === 'idle'" class="text-sm opacity-60">
+        Idle
+      </div>
+      <div v-else-if="data" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <PlaylistCard
-          v-for="pl in playlists"
+          v-for="pl in (data as any)?.Items || []"
           :key="pl.Id"
           :playlist="pl"
         />
-        <div v-if="!playlists.length" class="col-span-full text-sm opacity-60">
+        <div v-if="!(data as any)?.Items?.length" class="col-span-full text-sm opacity-60">
           No playlists found.
         </div>
       </div>

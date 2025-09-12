@@ -158,7 +158,6 @@ Checklist:
 
 - Search across playlists/tracks
 - Offline playback caching
-- Waveform or visualizer component (lazy loaded)
 - Theming / dark-mode toggle
 
 ## 20. When Unsure

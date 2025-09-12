@@ -153,7 +153,6 @@ The legacy playlist & playlist items server endpoints were removed after migrati
 ### Next Ideas
 
 - Artwork thumbnails via `/Items/{id}/Images/Primary`.
-- Waveform / progress & queue management.
 - Recently played + basic analytics.
 - Caching headers on playlist + items endpoints.
 - Range request support in stream proxy (partial content 206) for better scrubbing.

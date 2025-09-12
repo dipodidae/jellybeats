@@ -2,25 +2,29 @@
 import { useRoute } from 'vue-router'
 import { usePlayerStore } from '../../stores/player'
 
-const route = useRoute()
-const id = computed(() => String(route.params.id))
+const route = useRoute('playlist-id')
+const itemId = computed(() => String(route.params.id))
 const userId = useRuntimeConfig().public.jellyfinUserId
 const player = usePlayerStore()
 
-// Details (BaseItemDto)
-// Using string path (lean pattern; types may not include dynamic key -> cast as any)
 const { data: playlist, error: playlistError, status: playlistStatus } = await useJellyfinData(
-  () => `Items/${id.value}` as any,
-  { query: { userId } },
+  '/Items/{itemId}',
+  {
+    path: { itemId: itemId.value },
+    query: { userId },
+  },
 )
 
-// Tracks for playlist
+// Tracks for playlist (BaseItemDtoQueryResult) using typed path
 const { data: tracksData, error, status } = await useJellyfinData(
-  () => `Playlists/${id.value}/Items` as any,
-  { query: { userId } },
+  '/Playlists/{playlistId}/Items',
+  {
+    path: { playlistId: itemId.value },
+    query: { userId },
+  },
 )
 
-const tracks = computed(() => (tracksData.value as any)?.Items || [])
+const tracks = computed<any[]>(() => (tracksData.value as any)?.Items || [])
 
 useSeoMeta({
   title: () => (playlist.value as any)?.Name ? `${(playlist.value as any).Name} • Playlist` : 'Playlist',

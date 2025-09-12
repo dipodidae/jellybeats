@@ -217,7 +217,7 @@ watch(expanded, () => nextTick(() => updateReservedHeight()))
         </div>
       </div>
 
-  <!-- Expanded extras (additional controls) -->
+      <!-- Expanded extras (additional controls) -->
       <Transition name="fade">
         <div v-if="expanded" class="px-4 pb-4">
           <div class="grid gap-4 sm:grid-cols-3">

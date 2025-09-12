@@ -36,6 +36,10 @@ export const pwa: ModuleOptions = {
   },
   workbox: {
     globPatterns: ['**/*.{js,css,html,txt,png,ico,svg}'],
+    // Exclude oversized HTML (SSR payload) from precache; rely on navigateFallback
+    globIgnores: ['**/index.html'],
+    // Increase limit to allow moderately larger assets if needed (default 2 MiB)
+    maximumFileSizeToCacheInBytes: 25 * 1024 * 1024, // 25 MiB
     navigateFallbackDenylist: [/^\/api\//],
     navigateFallback: '/',
     cleanupOutdatedCaches: true,

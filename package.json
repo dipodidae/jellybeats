@@ -1,7 +1,7 @@
 {
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.13.1",
+  "packageManager": "pnpm@10.17.0",
   "scripts": {
     "build": "nuxt build",
     "dev:pwa": "VITE_PLUGIN_PWA=true nuxt dev",
@@ -36,7 +36,7 @@
     "eslint-plugin-format": "catalog:dev",
     "eslint-plugin-tailwindcss": "catalog:dev",
     "husky": "catalog:build",
-    "nuxt": "catalog:build",
+    "nuxt": "^4.1.2",
     "nuxt-api-party": "catalog:nuxt-api-party",
     "pinia": "catalog:frontend",
     "typescript": "catalog:dev",
